@@ -36,9 +36,15 @@ class AuthController extends GetxController {
     ultimoCorreo.value = await _cache.leerCorreo() ?? '';
     try {
       usuario.value = await _auth.sesionActual();
+      if (usuario.value != null) await _cache.guardarUsuario(usuario.value!);
     } on ApiException catch (e) {
-      // Sin red conservamos el token (se reintenta luego); si el token es inválido, se limpia.
-      if (e.tipo == TipoError.noAutenticado) await _auth.cerrarSesion();
+      if (e.tipo == TipoError.noAutenticado) {
+        await _auth.cerrarSesion(); // token inválido o vencido
+        await _cache.borrarUsuario();
+      } else if (e.tipo == TipoError.sinConexion) {
+        // Sin red: se conserva la sesión con el último usuario conocido.
+        usuario.value = await _cache.leerUsuario();
+      }
     }
     cargando.value = false;
   }
@@ -54,6 +60,7 @@ class AuthController extends GetxController {
     error.value = null;
     try {
       usuario.value = await accion();
+      await _cache.guardarUsuario(usuario.value!);
       await _cache.guardarCorreo(correo.trim());
       return true;
     } on ApiException catch (e) {
@@ -66,6 +73,7 @@ class AuthController extends GetxController {
 
   Future<void> cerrarSesion() async {
     await _auth.cerrarSesion();
+    await _cache.borrarUsuario();
     usuario.value = null;
     if (Get.isRegistered<MovimientosController>()) Get.find<MovimientosController>().limpiar();
   }
