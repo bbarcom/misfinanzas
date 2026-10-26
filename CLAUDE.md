@@ -1,31 +1,25 @@
-Eres mi asistente de desarrollo Flutter. Vamos a construir "MisFinanzas", una app
-Android para registrar ingresos y gastos por mes y por día. Respeta SIEMPRE este contexto.
+# MisFinanzas — contexto del proyecto
 
-OBJETIVO
-App móvil (Flutter, Dart, Android) para que un usuario registre ingresos y gastos,
-tanto por DÍA (con fecha exacta) como por MES (monto mensual consolidado), y consulte
-resúmenes y balance.
+App Flutter (Android) de ingresos y gastos por **día** y por **mes**, con backend propio.
+Proyecto Final del curso "Desarrolla Aplicaciones Móviles Robustas con Flutter e IA".
 
-ENTIDADES (3 tablas en SQLite)
-1. usuarios(id, nombre, correo UNIQUE, passwordHash, salt, creadoEn)
-2. ingresos(id, usuarioId FK, monto INTEGER en centavos, categoria, descripcion, fecha, modo, creadoEn)
-3. gastos(id, usuarioId FK, monto INTEGER en centavos, categoria, descripcion, fecha, modo, creadoEn)
-- modo: 'diario' o 'mensual'. Si es 'mensual', fecha = día 1 del mes.
-- ON DELETE CASCADE de usuarios hacia ingresos y gastos.
+## Arquitectura (obligatoria)
+`screens/` → `controllers/` (GetX) → `services/` (HTTP, caché local, almacenamiento seguro) → API REST (`backend/`).
+- Ninguna pantalla hace HTTP; solo habla con controladores GetX (`Get.find<...>()`).
+- Estado compartido entre pantallas = `GetxController` con `Rx`. `setState` solo para estado local de un formulario.
+- Token JWT en `flutter_secure_storage` (`TokenStorage`). Nunca en `shared_preferences`.
+- `shared_preferences` solo guarda la caché local de movimientos y el último correo.
+- Backend en `backend/` (Dart + shelf). Datos en `backend/data/db.json` (ignorado por git).
+- La clave del proveedor de IA vive SOLO en `backend/.env` (ignorado). La app llama a `POST /ia/resumen`.
 
-STACK Y REGLAS
-- Flutter estable, Dart null-safety, Material 3.
-- Persistencia: sqflite + path. Estado: provider. Formato de fechas/moneda: intl. Hash: crypto.
-- Arquitectura por carpetas dentro de lib/: models/, data/ (base de datos y repositorios),
-  providers/, screens/, widgets/, utils/.
-- Nunca guardar contraseñas en texto plano (SHA-256 con sal aleatoria).
-- Montos como int en centavos; mostrar con formato de moneda en la interfaz.
-- Validar formularios (monto > 0, categoría obligatoria, fecha válida, correo válido).
-- Textos de la interfaz en español.
-- Una pantalla o funcionalidad por vez. No agregues pantallas ni dependencias que yo no pida.
-- Código limpio, comentado en español donde sea útil. Después de cada cambio, indica qué
-  archivos creaste o modificaste y cómo probarlo.
+## Reglas de datos
+- Movimiento: `tipo` ingreso|gasto, `monto` INT en centavos (> 0), `modo` diario|mensual; si es mensual, `fecha` = día 1.
+- El total mensual suma movimientos `diario` y `mensual`; la vista diaria solo los `diario`.
+- Errores de la API: 400 petición mal formada, 401 no autenticado, 404, 409 duplicado, 422 datos inválidos, 5xx servidor.
+  Cada uno muestra un mensaje distinto (`ApiException.paraUsuario`).
 
-CÓMO TRABAJAMOS
-Voy a darte instrucciones por pasos. En cada paso, haz solo lo que pido, verifica con
-`flutter analyze` y dime qué debo probar en el emulador.
+## Reglas de trabajo
+- Textos de interfaz en español; comentarios en español donde aporten.
+- Antes de dar algo por hecho: `flutter analyze`, `flutter test` y, en `backend/`, `dart analyze` y `dart test`.
+- Nunca commitear `.env`, claves ni tokens. Commits pequeños y descriptivos.
+- No agregar dependencias sin necesidad; explicar cada una.
