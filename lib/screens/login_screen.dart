@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 
-import '../providers/auth_provider.dart';
+import '../controllers/auth_controller.dart';
 import '../utils/validators.dart';
 import 'registro_screen.dart';
 
@@ -14,11 +14,10 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _form = GlobalKey<FormState>();
-  final _correo = TextEditingController();
+  late final _correo = TextEditingController(text: _auth.ultimoCorreo.value);
   final _password = TextEditingController();
   bool _ocultar = true;
-  bool _enviando = false;
-  String? _error;
+  final _auth = Get.find<AuthController>();
 
   @override
   void dispose() {
@@ -29,16 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _entrar() async {
     if (!_form.currentState!.validate()) return;
-    setState(() {
-      _enviando = true;
-      _error = null;
-    });
-    final error = await context.read<AuthProvider>().iniciarSesion(_correo.text, _password.text);
-    if (!mounted) return;
-    setState(() {
-      _enviando = false;
-      _error = error;
-    });
+    await _auth.iniciarSesion(_correo.text, _password.text);
   }
 
   @override
@@ -84,21 +74,28 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       validator: validarPassword,
                     ),
-                    if (_error != null) ...[
-                      const SizedBox(height: 12),
-                      Text(_error!, style: TextStyle(color: tema.colorScheme.error)),
-                    ],
+                    Obx(() => _auth.error.value == null
+                        ? const SizedBox.shrink()
+                        : Padding(
+                            padding: const EdgeInsets.only(top: 12),
+                            child: Text(_auth.error.value!,
+                                style: TextStyle(color: tema.colorScheme.error)),
+                          )),
                     const SizedBox(height: 24),
-                    FilledButton(
-                      onPressed: _enviando ? null : _entrar,
-                      child: _enviando
-                          ? const SizedBox(
-                              width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                          : const Text('Iniciar sesión'),
-                    ),
+                    Obx(() => FilledButton(
+                          onPressed: _auth.enviando.value ? null : _entrar,
+                          child: _auth.enviando.value
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2))
+                              : const Text('Iniciar sesión'),
+                        )),
                     TextButton(
-                      onPressed: () => Navigator.push(
-                          context, MaterialPageRoute(builder: (_) => const RegistroScreen())),
+                      onPressed: () {
+                        _auth.error.value = null;
+                        Get.to(() => const RegistroScreen());
+                      },
                       child: const Text('¿No tienes cuenta? Regístrate'),
                     ),
                   ],

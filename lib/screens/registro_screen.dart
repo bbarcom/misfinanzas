@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 
-import '../providers/auth_provider.dart';
+import '../controllers/auth_controller.dart';
 import '../utils/validators.dart';
 
 class RegistroScreen extends StatefulWidget {
@@ -18,8 +18,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
   final _password = TextEditingController();
   final _confirmar = TextEditingController();
   bool _ocultar = true;
-  bool _enviando = false;
-  String? _error;
+  final _auth = Get.find<AuthController>();
 
   @override
   void dispose() {
@@ -32,23 +31,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
 
   Future<void> _registrar() async {
     if (!_form.currentState!.validate()) return;
-    setState(() {
-      _enviando = true;
-      _error = null;
-    });
-    final auth = context.read<AuthProvider>();
-    final navigator = Navigator.of(context);
-    final error = await auth.registrar(_nombre.text, _correo.text, _password.text);
-    if (!mounted) return;
-    if (error == null) {
-      // La sesión ya está iniciada: se vuelve a la raíz, que mostrará la pantalla principal.
-      navigator.popUntil((r) => r.isFirst);
-    } else {
-      setState(() {
-        _enviando = false;
-        _error = error;
-      });
-    }
+    final ok = await _auth.registrar(_nombre.text, _correo.text, _password.text);
+    // La sesión ya está iniciada: se vuelve a la raíz, que mostrará la pantalla principal.
+    if (ok) Get.until((r) => r.isFirst);
   }
 
   @override
@@ -103,18 +88,23 @@ class _RegistroScreenState extends State<RegistroScreen> {
                   validator: (v) =>
                       v != _password.text ? 'Las contraseñas no coinciden' : null,
                 ),
-                if (_error != null) ...[
-                  const SizedBox(height: 12),
-                  Text(_error!, style: TextStyle(color: tema.colorScheme.error)),
-                ],
+                Obx(() => _auth.error.value == null
+                    ? const SizedBox.shrink()
+                    : Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: Text(_auth.error.value!,
+                            style: TextStyle(color: tema.colorScheme.error)),
+                      )),
                 const SizedBox(height: 24),
-                FilledButton(
-                  onPressed: _enviando ? null : _registrar,
-                  child: _enviando
-                      ? const SizedBox(
-                          width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Text('Registrarme'),
-                ),
+                Obx(() => FilledButton(
+                      onPressed: _auth.enviando.value ? null : _registrar,
+                      child: _auth.enviando.value
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Text('Registrarme'),
+                    )),
               ],
             ),
           ),

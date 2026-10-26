@@ -1,50 +1,51 @@
 import 'modo_registro.dart';
 
-/// Tipo de movimiento (determina la tabla y las categorías).
+/// Tipo de movimiento (determina las categorías disponibles).
 enum TipoMovimiento {
   ingreso,
   gasto;
 
-  String get etiqueta => this == ingreso ? 'ingreso' : 'gasto';
+  String get etiqueta => name;
 }
 
-/// Campos comunes de ingresos y gastos (mismas columnas en ambas tablas).
-abstract class Movimiento {
+/// Ingreso o gasto del usuario. Monto en centavos; para modo mensual, fecha = día 1.
+class Movimiento {
   final int? id;
-  final int usuarioId;
-
-  /// Monto en centavos (siempre > 0).
+  final TipoMovimiento tipo;
   final int monto;
   final String categoria;
   final String descripcion;
-
-  /// Solo fecha. Para modo mensual es siempre el día 1 del mes.
   final DateTime fecha;
   final ModoRegistro modo;
-  final DateTime creadoEn;
 
   const Movimiento({
     this.id,
-    required this.usuarioId,
+    required this.tipo,
     required this.monto,
     required this.categoria,
     this.descripcion = '',
     required this.fecha,
     required this.modo,
-    required this.creadoEn,
   });
 
-  TipoMovimiento get tipo;
+  factory Movimiento.fromJson(Map<String, dynamic> j) => Movimiento(
+        id: j['id'] as int?,
+        tipo: TipoMovimiento.values.byName(j['tipo'] as String),
+        monto: j['monto'] as int,
+        categoria: j['categoria'] as String,
+        descripcion: (j['descripcion'] as String?) ?? '',
+        fecha: fechaDesdeIso(j['fecha'] as String),
+        modo: ModoRegistro.fromDb(j['modo'] as String),
+      );
 
-  Map<String, Object?> toMap() => {
-        if (id != null) 'id': id,
-        'usuarioId': usuarioId,
+  /// Cuerpo que espera la API (sin id).
+  Map<String, dynamic> toJson() => {
+        'tipo': tipo.name,
         'monto': monto,
         'categoria': categoria,
         'descripcion': descripcion,
         'fecha': fechaAIso(fecha),
         'modo': modo.toDb(),
-        'creadoEn': creadoEn.toIso8601String(),
       };
 }
 

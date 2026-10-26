@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../models/movimiento.dart';
 import '../utils/formatters.dart';
@@ -7,7 +8,7 @@ import '../utils/formatters.dart';
 class MovimientoTile extends StatelessWidget {
   final Movimiento movimiento;
   final VoidCallback onTap;
-  final Future<void> Function() onEliminar;
+  final Future<String?> Function() onEliminar;
 
   const MovimientoTile({
     super.key,
@@ -47,7 +48,8 @@ class MovimientoTile extends StatelessWidget {
       ),
       confirmDismiss: (_) async {
         if (!await _confirmar(context)) return false;
-        await onEliminar();
+        final error = await onEliminar();
+        if (error != null) Get.snackbar('No se pudo eliminar', error);
         return false; // la lista se reconstruye al recargar
       },
       child: ListTile(

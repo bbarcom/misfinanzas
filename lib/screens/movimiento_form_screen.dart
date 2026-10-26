@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 
 import '../models/modo_registro.dart';
 import '../models/movimiento.dart';
-import '../providers/movimientos_provider.dart';
+import '../controllers/movimientos_controller.dart';
+import '../services/api_exception.dart';
 import '../utils/categorias.dart';
 import '../utils/formatters.dart';
 
@@ -34,6 +35,7 @@ class _MovimientoFormScreenState extends State<MovimientoFormScreen> {
   late DateTime _fecha;
   String? _categoria;
   bool _guardando = false;
+  String? _errorApi;
 
   bool get _editando => widget.existente != null;
 
@@ -68,18 +70,33 @@ class _MovimientoFormScreenState extends State<MovimientoFormScreen> {
 
   Future<void> _guardar() async {
     if (!_form.currentState!.validate()) return;
-    setState(() => _guardando = true);
-    final navigator = Navigator.of(context);
-    await context.read<MovimientosProvider>().guardar(
-          tipo: widget.tipo,
-          existente: widget.existente,
-          monto: montoACentavos(_monto.text)!,
-          categoria: _categoria!,
-          descripcion: _descripcion.text,
-          fecha: _fecha,
-          modo: _modo,
-        );
-    navigator.pop();
+    setState(() {
+      _guardando = true;
+      _errorApi = null;
+    });
+    final modo = _modo;
+    final f = modo == ModoRegistro.mensual
+        ? DateTime(_fecha.year, _fecha.month, 1)
+        : DateTime(_fecha.year, _fecha.month, _fecha.day);
+    try {
+      await Get.find<MovimientosController>().guardar(Movimiento(
+        id: widget.existente?.id,
+        tipo: widget.tipo,
+        monto: montoACentavos(_monto.text)!,
+        categoria: _categoria!,
+        descripcion: _descripcion.text.trim(),
+        fecha: f,
+        modo: modo,
+      ));
+      Get.back();
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() {
+          _guardando = false;
+          _errorApi = e.paraUsuario;
+        });
+      }
+    }
   }
 
   Future<void> _eliminar() async {
@@ -94,10 +111,13 @@ class _MovimientoFormScreenState extends State<MovimientoFormScreen> {
         ],
       ),
     );
-    if (ok != true || !mounted) return;
-    final navigator = Navigator.of(context);
-    await context.read<MovimientosProvider>().eliminar(widget.existente!);
-    navigator.pop();
+    if (ok != true) return;
+    final error = await Get.find<MovimientosController>().eliminar(widget.existente!);
+    if (error == null) {
+      Get.back();
+    } else if (mounted) {
+      setState(() => _errorApi = error);
+    }
   }
 
   @override
@@ -215,6 +235,10 @@ class _MovimientoFormScreenState extends State<MovimientoFormScreen> {
                       ),
                     ],
                   ),
+                if (_errorApi != null) ...[
+                  const SizedBox(height: 12),
+                  Text(_errorApi!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                ],
                 const SizedBox(height: 24),
                 FilledButton.icon(
                   onPressed: _guardando ? null : _guardar,

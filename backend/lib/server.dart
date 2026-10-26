@@ -210,7 +210,7 @@ Handler construirApi(Store store, Config cfg, {http.Client? clienteIa}) {
 
   final rutasPublicas = {'/auth/registro', '/auth/login', '/salud'};
 
-  Middleware autenticacion = (inner) => (req) {
+  Handler autenticacion(Handler inner) => (req) {
         if (rutasPublicas.contains('/${req.url.path}')) return inner(req);
         final h = req.headers['authorization'] ?? '';
         final uid = h.startsWith('Bearer ') ? verificarToken(h.substring(7), cfg.jwtSecret) : null;
@@ -220,7 +220,7 @@ Handler construirApi(Store store, Config cfg, {http.Client? clienteIa}) {
         return inner(req.change(context: {'uid': uid}));
       };
 
-  Middleware errores = (inner) => (req) async {
+  Handler errores(Handler inner) => (req) async {
         try {
           return await inner(req);
         } on ApiError catch (e) {

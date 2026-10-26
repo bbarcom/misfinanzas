@@ -1,53 +1,13 @@
-/// Usuario de la app. La contraseña nunca se guarda: solo hash + sal.
+/// Usuario autenticado (lo devuelve la API; la contraseña nunca llega a la app).
 class Usuario {
-  final int? id;
+  final int id;
   final String nombre;
   final String correo;
-  final String passwordHash;
-  final String salt;
-  final DateTime creadoEn;
 
-  const Usuario({
-    this.id,
-    required this.nombre,
-    required this.correo,
-    required this.passwordHash,
-    required this.salt,
-    required this.creadoEn,
-  });
+  const Usuario({required this.id, required this.nombre, required this.correo});
 
-  Usuario copyWith({
-    int? id,
-    String? nombre,
-    String? correo,
-    String? passwordHash,
-    String? salt,
-    DateTime? creadoEn,
-  }) =>
-      Usuario(
-        id: id ?? this.id,
-        nombre: nombre ?? this.nombre,
-        correo: correo ?? this.correo,
-        passwordHash: passwordHash ?? this.passwordHash,
-        salt: salt ?? this.salt,
-        creadoEn: creadoEn ?? this.creadoEn,
-      );
+  factory Usuario.fromJson(Map<String, dynamic> j) =>
+      Usuario(id: j['id'] as int, nombre: j['nombre'] as String, correo: j['correo'] as String);
 
-  Map<String, Object?> toMap() => {
-        if (id != null) 'id': id,
-        'nombre': nombre,
-        'correo': correo,
-        'passwordHash': passwordHash,
-        'salt': salt,
-        'creadoEn': creadoEn.toIso8601String(),
-      };
-
-  factory Usuario.fromMap(Map<String, Object?> map) => Usuario(
-        id: map['id'] as int?,
-        nombre: map['nombre'] as String,
-        correo: map['correo'] as String,
-        passwordHash: map['passwordHash'] as String,
-        salt: map['salt'] as String,
-        creadoEn: DateTime.parse(map['creadoEn'] as String),
-      );
+  Map<String, dynamic> toJson() => {'id': id, 'nombre': nombre, 'correo': correo};
 }
